@@ -1,0 +1,326 @@
+---
+# ============================================================================
+# DOCKER COMPOSE - DATA PIPELINE PLATFORM
+# ============================================================================
+# Plateforme self-service pour pipelines ETL avec architecture Medallion
+# ============================================================================
+
+x-airflow-common:
+  &airflow-common
+  build:
+    context: ../../airflow
+    dockerfile: Dockerfile
+  env_file:
+    - ${ENV_FILE_PATH:-../../config/.env}
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__CELERY__WORKER_CONCURRENCY: 4
+    AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+    
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@pipeline-postgres/airflow
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@pipeline-postgres/airflow
+    AIRFLOW__CELERY__BROKER_URL: redis://:@pipeline-redis:6379/0
+    
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__SCHEDULER__CATCHUP_BY_DEFAULT: 'false'
+    
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    
+    AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT: 120
+    AIRFLOW__API__API_REQUEST_TIMEOUT: 300
+    AIRFLOW__CELERY__OPERATION_TIMEOUT: 300
+    
+    POSTGRES_HOST: pipeline-postgres
+    POSTGRES_PORT: 5432
+    POSTGRES_DB: ${POSTGRES_DB_METIER}
+    POSTGRES_USER: ${POSTGRES_USER}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    
+    MINIO_ENDPOINT: pipeline-minio:9000
+    MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+    MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+    
+    PYTHONPATH: /opt/airflow/dags:/opt/airflow/plugins
+  
+  deploy:
+    resources:
+      limits:
+        memory: 2G
+      reservations:
+        memory: 512M
+  
+  volumes:
+    - ../../airflow/dags:/opt/airflow/dags
+    - ../../airflow/logs:/opt/airflow/logs
+    - ../../airflow/config:/opt/airflow/config
+    - ../../airflow/plugins:/opt/airflow/plugins
+    - ../../data:/data
+
+  user: "${AIRFLOW_UID:-50000}:0"
+  
+  depends_on:
+    &airflow-common-depends-on
+    pipeline-redis:
+      condition: service_healthy
+    pipeline-postgres:
+      condition: service_healthy
+
+services:
+  
+  pipeline-postgres:
+    image: postgres:15-alpine
+    container_name: pipeline-postgres
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - pipeline-postgres-data:/var/lib/postgresql/data
+      - ../../sql/init-databases.sh:/docker-entrypoint-initdb.d/00-init-databases.sh
+    ports:
+      - "5432:5432"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+    restart: always
+    networks:
+      - pipeline-network
+
+  pipeline-redis:
+    image: redis:7.2-alpine
+    container_name: pipeline-redis
+    expose:
+      - 6379
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 30s
+      retries: 50
+    restart: always
+    networks:
+      - pipeline-network
+
+  pipeline-minio:
+    image: minio/minio:latest
+    container_name: pipeline-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - pipeline-minio-data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    restart: always
+    networks:
+      - pipeline-network
+
+  pipeline-backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    container_name: pipeline-backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pipeline-postgres:5432/${POSTGRES_DB_METIER}
+      REDIS_URL: redis://pipeline-redis:6379/0
+      MINIO_ENDPOINT: pipeline-minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minio}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minio123}
+      SECRET_KEY: ${SECRET_KEY}
+      AIRFLOW_API_URL: http://pipeline-airflow-webserver:8080
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../backend:/app
+      - ../../data:/data
+    depends_on:
+      - pipeline-postgres
+      - pipeline-redis
+      - pipeline-minio
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    restart: always
+    networks:
+      - pipeline-network
+
+  pipeline-frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    container_name: pipeline-frontend
+    environment:
+      VITE_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../../frontend:/app
+      - /app/node_modules
+    depends_on:
+      - pipeline-backend
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    restart: always
+    networks:
+      - pipeline-network
+
+  pipeline-spark-master:
+    image: apache/spark:3.5.1
+    container_name: pipeline-spark-master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    ports:
+      - "7077:7077"
+      - "8081:8080"
+    environment:
+      - SPARK_MASTER_HOST=pipeline-spark-master
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    volumes:
+      - ../../data:/data
+    networks:
+      - pipeline-network
+
+  pipeline-spark-worker:
+    image: apache/spark:3.5.1
+    container_name: pipeline-spark-worker
+    depends_on:
+      - pipeline-spark-master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://pipeline-spark-master:7077
+    environment:
+      - SPARK_WORKER_MEMORY=3G
+      - SPARK_WORKER_CORES=2
+    deploy:
+      resources:
+        limits:
+          memory: 3.5G
+    volumes:
+      - ../../data:/data
+    networks:
+      - pipeline-network
+
+  pipeline-airflow-webserver:
+    <<: *airflow-common
+    container_name: pipeline-airflow-webserver
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      pipeline-airflow-init:
+        condition: service_completed_successfully
+    networks:
+      - pipeline-network
+
+  pipeline-airflow-scheduler:
+    <<: *airflow-common
+    container_name: pipeline-airflow-scheduler
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      pipeline-airflow-init:
+        condition: service_completed_successfully
+    networks:
+      - pipeline-network
+
+  pipeline-airflow-worker:
+    <<: *airflow-common
+    container_name: pipeline-airflow-worker
+    command: celery worker
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    environment:
+      <<: *airflow-common-env
+      DUMB_INIT_SETSID: "0"
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      pipeline-airflow-webserver:
+        condition: service_healthy
+      pipeline-airflow-init:
+        condition: service_completed_successfully
+    networks:
+      - pipeline-network
+
+  pipeline-airflow-init:
+    <<: *airflow-common
+    container_name: pipeline-airflow-init
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        mkdir -p /opt/airflow/{logs,dags,dags/generated,plugins,config}
+        /entrypoint airflow db migrate
+        /entrypoint airflow users create \
+          --username ${_AIRFLOW_WWW_USER_USERNAME:-airflow} \
+          --password ${_AIRFLOW_WWW_USER_PASSWORD:-airflow} \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com || true
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_MIGRATE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+    user: "0:0"
+    networks:
+      - pipeline-network
+
+volumes:
+  pipeline-postgres-data:
+    name: pipeline_postgres_data
+  pipeline-minio-data:
+    name: pipeline_minio_data
+
+networks:
+  pipeline-network:
+    name: pipeline_network
+    driver: bridge
