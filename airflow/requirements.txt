@@ -1,0 +1,20 @@
+# Airflow providers — versions gérées par les contraintes officielles
+apache-airflow-providers-celery
+apache-airflow-providers-postgres
+apache-airflow-providers-fab
+
+# PySpark & Delta — versions fixes OK car hors écosystème Airflow
+pyspark==3.5.1
+delta-spark==3.0.0
+
+# Data Processing
+pandas==2.1.4
+pyarrow==14.0.2
+great-expectations==0.18.8
+
+# Database
+psycopg2-binary==2.9.9
+
+# Utils
+python-dotenv==1.0.0
+loguru==0.7.2

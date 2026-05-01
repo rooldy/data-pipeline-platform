@@ -1,0 +1,6 @@
+__pycache__
+*.py[cod]
+logs/
+dags/generated/*.py
+.env
+.DS_Store

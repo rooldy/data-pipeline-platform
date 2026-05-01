@@ -2,7 +2,7 @@
 # Backend FastAPI + PySpark + Delta Lake
 # ============================================================================
 
-FROM python:3.11-slim
+FROM python:3.11-slim-bookworm
 
 LABEL maintainer="Rooldy Alphonse" \
       description="FastAPI Backend with PySpark for Medallion Architecture" \
@@ -61,10 +61,10 @@ RUN ${SPARK_HOME}/bin/spark-submit \
 WORKDIR /app
 
 # Copie des requirements
-COPY requirements/prod.txt /tmp/requirements.txt
+COPY requirements/ /tmp/requirements/
 
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r /tmp/requirements.txt
+    && pip install --no-cache-dir -r /tmp/requirements/prod.txt
 
 # ============================================================================
 # APPLICATION CODE
