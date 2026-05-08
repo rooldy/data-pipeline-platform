@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from 'react'
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import axios from 'axios'
+import PipelineBuilder from './components/pipeline/PipelineBuilder/PipelineBuilder'
+
+// ─── Dashboard (page d'accueil existante) ────────────────────────────────────
 
 interface ApiInfo {
   message: string
@@ -8,24 +12,15 @@ interface ApiInfo {
   architecture: string
 }
 
-function App() {
+function Dashboard() {
   const [apiInfo, setApiInfo] = useState<ApiInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchApiInfo = async () => {
-      try {
-        const response = await axios.get('http://localhost:8000/')
-        setApiInfo(response.data)
-        setLoading(false)
-      } catch (err) {
-        setError('Failed to connect to backend')
-        setLoading(false)
-      }
-    }
-
-    fetchApiInfo()
+    axios.get('http://localhost:8000/')
+      .then((res) => { setApiInfo(res.data); setLoading(false) })
+      .catch(() => { setError('Failed to connect to backend'); setLoading(false) })
   }, [])
 
   return (
@@ -33,6 +28,11 @@ function App() {
       <header style={styles.header}>
         <h1 style={styles.title}>🚀 Data Pipeline Platform</h1>
         <p style={styles.subtitle}>Architecture Medallion - Bronze / Silver / Gold</p>
+
+        {/* ── Lien vers le Pipeline Builder ── */}
+        <Link to="/pipeline/new" style={styles.builderBtn}>
+          ⬡ Ouvrir le Pipeline Builder →
+        </Link>
       </header>
 
       <main style={styles.main}>
@@ -54,27 +54,19 @@ function App() {
         <div style={styles.card}>
           <h2 style={styles.cardTitle}>Medallion Layers</h2>
           <div style={styles.layers}>
-            <div style={styles.layer}>
-              <span style={styles.layerIcon}>🥉</span>
-              <div>
-                <strong>Bronze</strong>
-                <p style={styles.layerDesc}>Raw data ingestion</p>
+            {[
+              { icon: '🥉', label: 'Bronze', desc: 'Raw data ingestion' },
+              { icon: '🥈', label: 'Silver', desc: 'Cleaned & validated data' },
+              { icon: '🥇', label: 'Gold',   desc: 'Business-ready aggregations' },
+            ].map((l) => (
+              <div key={l.label} style={styles.layer}>
+                <span style={styles.layerIcon}>{l.icon}</span>
+                <div>
+                  <strong>{l.label}</strong>
+                  <p style={styles.layerDesc}>{l.desc}</p>
+                </div>
               </div>
-            </div>
-            <div style={styles.layer}>
-              <span style={styles.layerIcon}>🥈</span>
-              <div>
-                <strong>Silver</strong>
-                <p style={styles.layerDesc}>Cleaned & validated data</p>
-              </div>
-            </div>
-            <div style={styles.layer}>
-              <span style={styles.layerIcon}>🥇</span>
-              <div>
-                <strong>Gold</strong>
-                <p style={styles.layerDesc}>Business-ready aggregations</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
@@ -91,6 +83,22 @@ function App() {
     </div>
   )
 }
+
+// ─── App + Router ─────────────────────────────────────────────────────────────
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/"                element={<Dashboard />} />
+        <Route path="/pipeline/new"    element={<PipelineBuilder />} />
+        <Route path="/pipeline/:id"    element={<PipelineBuilder />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+// ─── Styles dashboard (inchangés) ────────────────────────────────────────────
 
 const styles = {
   container: {
@@ -110,8 +118,22 @@ const styles = {
   },
   subtitle: {
     fontSize: '1.2rem',
-    margin: 0,
+    margin: '0 0 1.5rem 0',
     opacity: 0.9,
+  },
+  builderBtn: {
+    display: 'inline-block',
+    marginTop: '0.5rem',
+    padding: '0.75rem 1.75rem',
+    background: 'rgba(255,255,255,0.15)',
+    border: '2px solid rgba(255,255,255,0.5)',
+    borderRadius: '10px',
+    color: 'white',
+    fontWeight: '600',
+    fontSize: '1rem',
+    textDecoration: 'none',
+    backdropFilter: 'blur(8px)',
+    transition: 'background 0.2s',
   },
   main: {
     maxWidth: '1200px',
@@ -139,10 +161,7 @@ const styles = {
     fontSize: '1.1rem',
     lineHeight: '2',
   },
-  error: {
-    color: '#e74c3c',
-    fontWeight: 'bold',
-  },
+  error: { color: '#e74c3c', fontWeight: 'bold' },
   layers: {
     display: 'flex',
     flexDirection: 'column' as const,
@@ -156,19 +175,7 @@ const styles = {
     background: '#f8f9fa',
     borderRadius: '8px',
   },
-  layerIcon: {
-    fontSize: '2rem',
-  },
-  layerDesc: {
-    margin: '0.25rem 0 0 0',
-    color: '#666',
-    fontSize: '0.9rem',
-  },
-  stepsList: {
-    paddingLeft: '1.5rem',
-    lineHeight: '2',
-    color: '#555',
-  },
+  layerIcon: { fontSize: '2rem' },
+  layerDesc: { margin: '0.25rem 0 0 0', color: '#666', fontSize: '0.9rem' },
+  stepsList: { paddingLeft: '1.5rem', lineHeight: '2', color: '#555' },
 }
-
-export default App

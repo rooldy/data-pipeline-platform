@@ -156,6 +156,7 @@ services:
     volumes:
       - ../../backend:/app
       - ../../data:/data
+      - ../../airflow/dags:/opt/airflow/dags
     depends_on:
       - pipeline-postgres
       - pipeline-redis

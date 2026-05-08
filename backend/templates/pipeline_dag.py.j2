@@ -1,0 +1,125 @@
+# ============================================================================
+# DAG AUTO-GÉNÉRÉ PAR DATA PIPELINE PLATFORM
+# Pipeline : {{ pipeline.name }}
+# Généré le : {{ generated_at }}
+# NE PAS MODIFIER MANUELLEMENT — Régénérer via l'interface
+# ============================================================================
+
+from datetime import datetime, timedelta
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from airflow.operators.empty import EmptyOperator
+import logging
+import json
+
+logger = logging.getLogger(__name__)
+
+# ── Configuration du DAG ────────────────────────────────────────────────────
+
+default_args = {
+    "owner": "data-pipeline-platform",
+    "depends_on_past": False,
+    "email_on_failure": False,
+    "email_on_retry": False,
+    "retries": 1,
+    "retry_delay": timedelta(minutes=5),
+}
+
+dag = DAG(
+    dag_id="{{ dag_id }}",
+    description="{{ description }}",
+    default_args=default_args,
+    schedule_interval={{ "'" + schedule + "'" if schedule else "None" }},
+    start_date=datetime(2024, 1, 1),
+    catchup=False,
+    tags=["generated", "medallion"{% for node in nodes %}, "{{ node.layer.value }}"{% endfor %}],
+)
+
+# ── Fonctions des tâches ────────────────────────────────────────────────────
+
+{% for node in nodes %}
+def task_{{ node.id | replace('-', '_') }}(**context):
+    """{{ node.kind | upper }} — {{ node.label }} ({{ node.subtype }})"""
+    config = json.loads('{{ node_configs[node.id] | tojson }}')
+    logger.info(f"Exécution {{ node.label }} — couche {{ node.layer.value }}")
+    
+    {% if node.kind == 'source' %}
+    # ── Source : {{ node.subtype }} ──
+    {% if node.subtype == 'csv' %}
+    logger.info(f"Lecture CSV : {config.get('path', 'N/A')}")
+    # TODO: implémenter lecture CSV avec PySpark
+    # spark.read.csv(config['path'], header=config.get('has_header', True))
+    {% elif node.subtype == 'postgresql' %}
+    logger.info(f"Lecture PostgreSQL : {config.get('database')}.{config.get('schema')}.{config.get('table')}")
+    # TODO: implémenter lecture PostgreSQL
+    {% elif node.subtype == 'api_rest' %}
+    logger.info(f"Appel API REST : {config.get('url')}")
+    # TODO: implémenter appel API REST
+    {% elif node.subtype == 's3' %}
+    logger.info(f"Lecture S3 : s3a://{config.get('bucket')}/{config.get('prefix')}")
+    # TODO: implémenter lecture S3/MinIO
+    {% endif %}
+    {% elif node.kind == 'transform' %}
+    # ── Transformation : {{ node.subtype }} ──
+    {% if node.subtype == 'filter' %}
+    logger.info(f"Filter : {config.get('column')} {config.get('operator')} {config.get('value')}")
+    # TODO: df.filter(df[config['column']] operator config['value'])
+    {% elif node.subtype == 'aggregate' %}
+    logger.info(f"Aggregate : group by {config.get('group_by')}")
+    # TODO: df.groupBy(*config['group_by']).agg(...)
+    {% elif node.subtype == 'join' %}
+    logger.info(f"Join : {config.get('join_type')} sur {config.get('left_key')} = {config.get('right_key')}")
+    # TODO: df1.join(df2, on=..., how=config['join_type'])
+    {% elif node.subtype == 'cast' %}
+    logger.info(f"Cast : {len(config.get('columns', []))} colonnes")
+    # TODO: appliquer les casts de types
+    {% endif %}
+    {% elif node.kind == 'output' %}
+    # ── Destination : {{ node.subtype }} ──
+    {% if node.subtype == 'delta_lake' %}
+    logger.info(f"Écriture Delta Lake : {config.get('table_name')} — mode {config.get('mode')}")
+    # TODO: df.write.format('delta').mode(config['mode']).save(config['path'])
+    {% elif node.subtype == 'postgresql' %}
+    logger.info(f"Écriture PostgreSQL : {config.get('schema')}.{config.get('table')}")
+    # TODO: df.write.jdbc(url=..., table=..., mode=config['mode'])
+    {% endif %}
+    {% endif %}
+    
+    return {"status": "success", "node": "{{ node.id }}", "layer": "{{ node.layer.value }}"}
+
+{% endfor %}
+
+# ── Définition des tâches ────────────────────────────────────────────────────
+
+start = EmptyOperator(task_id="start", dag=dag)
+end   = EmptyOperator(task_id="end",   dag=dag)
+
+{% for node in nodes %}
+task_{{ node.id | replace('-', '_') }}_op = PythonOperator(
+    task_id="{{ node.id | replace('-', '_') }}",
+    python_callable=task_{{ node.id | replace('-', '_') }},
+    dag=dag,
+)
+{% endfor %}
+
+# ── Dépendances (edges) ──────────────────────────────────────────────────────
+
+start >> [
+{% for node in nodes %}
+{% if not edges | selectattr('target', 'equalto', node.id) | list %}
+    task_{{ node.id | replace('-', '_') }}_op,
+{% endif %}
+{% endfor %}
+]
+
+{% for edge in edges %}
+task_{{ edge.source | replace('-', '_') }}_op >> task_{{ edge.target | replace('-', '_') }}_op
+{% endfor %}
+
+[
+{% for node in nodes %}
+{% if not edges | selectattr('source', 'equalto', node.id) | list %}
+    task_{{ node.id | replace('-', '_') }}_op,
+{% endif %}
+{% endfor %}
+] >> end
