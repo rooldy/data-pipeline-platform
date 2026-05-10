@@ -189,11 +189,11 @@ services:
           memory: 512M
     restart: always
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
+      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://127.0.0.1:3000"]
       interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
     networks:
       - pipeline-network
 

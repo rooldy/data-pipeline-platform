@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import PipelineCanvas from '../Canvas/PipelineCanvas'
 import NodePalette    from '../NodePalette/NodePalette'
@@ -7,7 +7,6 @@ import { ToastContainer, useToast } from '../../common/Toast/Toast'
 import { usePipelineStore } from '../../../store/pipelineStore'
 import { createPipeline, saveToLocalStorage } from '../../../api/pipeline.api'
 import './PipelineBuilder.css'
-
 interface TopbarProps {
   onSave:   () => void
   onDeploy: () => void
@@ -111,6 +110,17 @@ export default function PipelineBuilder() {
       error('Échec de la sauvegarde locale')
     }
   }
+
+    useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault()
+        handleSave()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   const handleDeploy = async () => {
     const validationError = validate()
