@@ -2,19 +2,17 @@
 # DAG AUTO-GÉNÉRÉ PAR DATA PIPELINE PLATFORM
 # Pipeline : {{ pipeline.name }}
 # Généré le : {{ generated_at }}
-# NE PAS MODIFIER MANUELLEMENT — Régénérer via l'interface
+# NE PAS MODIFIER MANUELLEMENT
 # ============================================================================
 
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.empty import EmptyOperator
-import logging
 import json
+import logging
 
 logger = logging.getLogger(__name__)
-
-# ── Configuration du DAG ────────────────────────────────────────────────────
 
 default_args = {
     "owner": "data-pipeline-platform",
@@ -39,57 +37,87 @@ dag = DAG(
 
 {% for node in nodes %}
 def task_{{ node.id | replace('-', '_') }}(**context):
-    """{{ node.kind | upper }} — {{ node.label }} ({{ node.subtype }})"""
-    config = json.loads('{{ node_configs[node.id] | tojson }}')
-    logger.info(f"Exécution {{ node.label }} — couche {{ node.layer.value }}")
-    
-    {% if node.kind == 'source' %}
+    """{{ node.kind.value | upper }} — {{ node.label }} ({{ node.subtype }})"""
+    import sys
+    sys.path.insert(0, '/opt/airflow/plugins')
+    from spark_tasks import (
+        get_spark_session, read_csv, read_postgresql,
+        apply_filter, apply_aggregate, apply_join, apply_cast,
+        write_delta_lake, write_postgresql,
+        write_checkpoint, read_checkpoint
+    )
+
+    DAG_ID  = "{{ dag_id }}"
+    NODE_ID = "{{ node.id | replace('-', '_') }}"
+    config  = json.loads('{{ node_configs[node.id] | tojson }}')
+    spark   = get_spark_session(f"{DAG_ID}_{NODE_ID}")
+
+    {% if node.kind.value == 'source' %}
     # ── Source : {{ node.subtype }} ──
     {% if node.subtype == 'csv' %}
-    logger.info(f"Lecture CSV : {config.get('path', 'N/A')}")
-    # TODO: implémenter lecture CSV avec PySpark
-    # spark.read.csv(config['path'], header=config.get('has_header', True))
+    df = read_csv(spark, config)
     {% elif node.subtype == 'postgresql' %}
-    logger.info(f"Lecture PostgreSQL : {config.get('database')}.{config.get('schema')}.{config.get('table')}")
-    # TODO: implémenter lecture PostgreSQL
+    df = read_postgresql(spark, config)
     {% elif node.subtype == 'api_rest' %}
-    logger.info(f"Appel API REST : {config.get('url')}")
-    # TODO: implémenter appel API REST
+    import requests
+    response = requests.request(
+        method=config.get('method', 'GET'),
+        url=config.get('url', ''),
+        headers=config.get('headers', {}),
+    )
+    data = response.json()
+    df = spark.createDataFrame(data if isinstance(data, list) else [data])
     {% elif node.subtype == 's3' %}
-    logger.info(f"Lecture S3 : s3a://{config.get('bucket')}/{config.get('prefix')}")
-    # TODO: implémenter lecture S3/MinIO
+    path = f"s3a://{config.get('bucket')}/{config.get('prefix')}"
+    df   = spark.read.format(config.get('file_format', 'parquet')).load(path)
     {% endif %}
-    {% elif node.kind == 'transform' %}
+
+    {% elif node.kind.value == 'transform' %}
     # ── Transformation : {{ node.subtype }} ──
+    {% set parent_id = edges | selectattr('target', 'equalto', node.id) | map(attribute='source') | first | replace('-', '_') %}
+    df = read_checkpoint(spark, DAG_ID, "{{ parent_id }}")
     {% if node.subtype == 'filter' %}
-    logger.info(f"Filter : {config.get('column')} {config.get('operator')} {config.get('value')}")
-    # TODO: df.filter(df[config['column']] operator config['value'])
+    df = apply_filter(df, config)
     {% elif node.subtype == 'aggregate' %}
-    logger.info(f"Aggregate : group by {config.get('group_by')}")
-    # TODO: df.groupBy(*config['group_by']).agg(...)
-    {% elif node.subtype == 'join' %}
-    logger.info(f"Join : {config.get('join_type')} sur {config.get('left_key')} = {config.get('right_key')}")
-    # TODO: df1.join(df2, on=..., how=config['join_type'])
+    df = apply_aggregate(df, config)
     {% elif node.subtype == 'cast' %}
-    logger.info(f"Cast : {len(config.get('columns', []))} colonnes")
-    # TODO: appliquer les casts de types
+    df = apply_cast(df, config)
+    {% elif node.subtype == 'join' %}
+    {% set parents = edges | selectattr('target', 'equalto', node.id) | map(attribute='source') | list %}
+    df_left  = read_checkpoint(spark, DAG_ID, "{{ parents[0] | replace('-', '_') }}")
+    {% if parents | length > 1 %}
+    df_right = read_checkpoint(spark, DAG_ID, "{{ parents[1] | replace('-', '_') }}")
+    {% else %}
+    df_right = df_left
     {% endif %}
-    {% elif node.kind == 'output' %}
+    df = apply_join(df_left, df_right, config)
+    {% endif %}
+
+    {% elif node.kind.value == 'output' %}
     # ── Destination : {{ node.subtype }} ──
+    {% set parent_id = edges | selectattr('target', 'equalto', node.id) | map(attribute='source') | first | replace('-', '_') %}
+    df = read_checkpoint(spark, DAG_ID, "{{ parent_id }}")
     {% if node.subtype == 'delta_lake' %}
-    logger.info(f"Écriture Delta Lake : {config.get('table_name')} — mode {config.get('mode')}")
-    # TODO: df.write.format('delta').mode(config['mode']).save(config['path'])
+    write_delta_lake(df, config)
     {% elif node.subtype == 'postgresql' %}
-    logger.info(f"Écriture PostgreSQL : {config.get('schema')}.{config.get('table')}")
-    # TODO: df.write.jdbc(url=..., table=..., mode=config['mode'])
+    write_postgresql(df, config)
     {% endif %}
+    spark.stop()
+    return {"status": "success", "node": NODE_ID, "layer": "{{ node.layer.value }}"}
     {% endif %}
-    
-    return {"status": "success", "node": "{{ node.id }}", "layer": "{{ node.layer.value }}"}
+
+    # Sauvegarder le checkpoint pour les tâches suivantes
+    {% if node.kind.value != 'output' %}
+    row_count = df.count()
+    write_checkpoint(df, DAG_ID, NODE_ID)
+    context['ti'].xcom_push(key='row_count', value=row_count)
+    spark.stop()
+    return {"status": "success", "node": NODE_ID, "rows": row_count, "layer": "{{ node.layer.value }}"}
+    {% endif %}
 
 {% endfor %}
 
-# ── Définition des tâches ────────────────────────────────────────────────────
+# ── Opérateurs ──────────────────────────────────────────────────────────────
 
 start = EmptyOperator(task_id="start", dag=dag)
 end   = EmptyOperator(task_id="end",   dag=dag)
@@ -102,7 +130,7 @@ task_{{ node.id | replace('-', '_') }}_op = PythonOperator(
 )
 {% endfor %}
 
-# ── Dépendances (edges) ──────────────────────────────────────────────────────
+# ── Dépendances ─────────────────────────────────────────────────────────────
 
 start >> [
 {% for node in nodes %}
