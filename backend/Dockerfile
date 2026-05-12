@@ -42,6 +42,12 @@ RUN wget -q https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-$
     && mv spark-${SPARK_VERSION}-bin-hadoop3 ${SPARK_HOME} \
     && rm spark-${SPARK_VERSION}-bin-hadoop3.tgz
 
+    # JARs S3A pour MinIO
+RUN wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar \
+    -P ${SPARK_HOME}/jars/ && \
+    wget -q https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar \
+    -P ${SPARK_HOME}/jars/
+    
 # ============================================================================
 # PRÉ-TÉLÉCHARGEMENT DRIVERS
 # ============================================================================

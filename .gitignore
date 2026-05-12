@@ -53,3 +53,11 @@ spark-warehouse/
 *.pem
 *.key
 secrets/
+
+# Data générée — ne pas committer
+data/checkpoints/
+data/gold/
+data/silver/
+data/bronze/*.parquet
+airflow/dags/generated/*.py
+airflow/logs/
