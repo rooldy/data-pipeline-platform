@@ -4,6 +4,7 @@ FastAPI Application - Data Pipeline Platform
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.pipelines import router as pipelines_router
+from app.api.v1.monitoring import router as monitoring_router
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -28,6 +29,7 @@ app.add_middleware(
 # ── Routers ──────────────────────────────────────────────────────────────────
 
 app.include_router(pipelines_router)
+app.include_router(monitoring_router)
 
 # ── Events ───────────────────────────────────────────────────────────────────
 

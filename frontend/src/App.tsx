@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import axios from 'axios'
 import PipelineBuilder from './components/pipeline/PipelineBuilder/PipelineBuilder'
+import Monitoring from './pages/Monitoring/Monitoring'
 
 // ─── Dashboard (page d'accueil existante) ────────────────────────────────────
 
@@ -32,6 +33,9 @@ function Dashboard() {
         {/* ── Lien vers le Pipeline Builder ── */}
         <Link to="/pipeline/new" style={styles.builderBtn}>
           ⬡ Ouvrir le Pipeline Builder →
+        </Link>
+        <Link to="/monitoring" style={styles.builderBtn}>
+          📊 Ouvrir le Monitoring →
         </Link>
       </header>
 
@@ -93,6 +97,7 @@ export default function App() {
         <Route path="/"                element={<Dashboard />} />
         <Route path="/pipeline/new"    element={<PipelineBuilder />} />
         <Route path="/pipeline/:id"    element={<PipelineBuilder />} />
+        <Route path="/monitoring" element={<Monitoring />} />
       </Routes>
     </BrowserRouter>
   )
