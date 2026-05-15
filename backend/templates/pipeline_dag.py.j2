@@ -93,6 +93,33 @@ def task_{{ node.id | replace('-', '_') }}(**context):
     df = apply_join(df_left, df_right, config)
     {% endif %}
 
+    {% elif node.kind.value == 'quality' %}
+    # ── Data Quality ──
+    import sys
+    sys.path.insert(0, '/opt/airflow/plugins')
+    from quality_tasks import run_quality_checks
+
+    {% set parent_id = edges | selectattr('target', 'equalto', node.id) | map(attribute='source') | first | replace('-', '_') %}
+    df    = read_checkpoint(spark, DAG_ID, "{{ parent_id }}")
+
+    rules         = config.get("rules", [])
+    fail_on_error = config.get("fail_on_error", True)
+
+    report = run_quality_checks(df, rules, DAG_ID, NODE_ID)
+
+    if fail_on_error and not report["all_passed"]:
+        failed = [r for r in report["results"] if not r["passed"]]
+        raise ValueError(
+            f"❌ Data Quality FAIL — {len(failed)} règle(s) échouée(s) :\n" +
+            "\n".join(f"  • [{r['rule_type']}] {r['column']} : {r['message']}" for r in failed)
+        )
+
+    write_checkpoint(df, DAG_ID, NODE_ID)
+    context['ti'].xcom_push(key='quality_report', value=report)
+    spark.stop()
+    return {"status": "success", "node": NODE_ID, "quality": report["all_passed"]}
+
+
     {% elif node.kind.value == 'output' %}
     # ── Destination : {{ node.subtype }} ──
     {% set parent_id = edges | selectattr('target', 'equalto', node.id) | map(attribute='source') | first | replace('-', '_') %}
@@ -107,7 +134,7 @@ def task_{{ node.id | replace('-', '_') }}(**context):
     {% endif %}
 
     # Sauvegarder le checkpoint pour les tâches suivantes
-    {% if node.kind.value != 'output' %}
+    {% if node.kind.value not in ['output', 'quality'] %}
     row_count = df.count()
     write_checkpoint(df, DAG_ID, NODE_ID)
     context['ti'].xcom_push(key='row_count', value=row_count)

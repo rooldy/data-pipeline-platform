@@ -1,12 +1,16 @@
 // ─── Enums & Unions ────────────────────────────────────────────────────────
 
-export type NodeKind = 'source' | 'transform' | 'output'
+export type NodeKind = 'source' | 'transform' | 'output' | 'quality'
 
 export type SourceSubtype    = 'csv' | 'postgresql' | 'api_rest' | 's3'
 export type TransformSubtype = 'filter' | 'aggregate' | 'join' | 'cast'
 export type OutputSubtype    = 'delta_lake' | 'postgresql'
 
-export type NodeSubtype = SourceSubtype | TransformSubtype | OutputSubtype
+// Nouveau sous-type
+export type QualitySubtype = 'data_quality'
+
+// Mettre à jour NodeSubtype
+export type NodeSubtype = SourceSubtype | TransformSubtype | OutputSubtype | QualitySubtype
 
 export type MedallionLayer = 'bronze' | 'silver' | 'gold'
 
@@ -168,4 +172,24 @@ export interface NodePaletteItem {
   icon: string
   defaultLayer: MedallionLayer
   defaultConfig: Partial<NodeConfig>
+}
+
+// ─── Config Data Quality ───────────────────────────────────────────────────────
+
+export type QualityRuleType = 'not_null' | 'regex' | 'range' | 'in_set'
+
+export interface QualityRule {
+  id:         string
+  column:     string
+  rule_type:  QualityRuleType
+  threshold:  number        // 0-100 (pourcentage)
+  pattern?:   string        // pour regex
+  min_value?: number        // pour range
+  max_value?: number        // pour range
+  values?:    string[]      // pour in_set
+}
+
+export interface DataQualityConfig {
+  rules:          QualityRule[]
+  fail_on_error:  boolean
 }

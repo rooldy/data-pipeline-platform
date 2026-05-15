@@ -62,3 +62,13 @@
 .pipeline-node__handle--in  { background: #6366f1 !important; top: -6px !important; }
 .pipeline-node__handle--out { background: #10b981 !important; bottom: -6px !important; }
 .pipeline-node__handle:hover { transform: scale(1.4) !important; }
+
+/* Quality node */
+.pipeline-node--quality {
+  border-color: rgba(139, 92, 246, 0.5);
+  background: linear-gradient(135deg, #0f0a1f 0%, #1a1d2e 60%);
+}
+
+.pipeline-node--quality.pipeline-node--selected {
+  border-color: #8b5cf6;
+}

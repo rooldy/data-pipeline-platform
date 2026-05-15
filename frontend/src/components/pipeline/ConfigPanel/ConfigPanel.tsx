@@ -4,6 +4,7 @@ import SourceForm    from './forms/SourceForm'
 import TransformForm from './forms/TransformForm'
 import OutputForm    from './forms/OutputForm'
 import './forms/forms.css'
+import QualityForm from './forms/QualityForm'
 
 export default function ConfigPanel() {
   const [saved, setSaved] = useState(false)
@@ -54,6 +55,12 @@ export default function ConfigPanel() {
               {selectedNode.kind === 'output' && (
                 <OutputForm
                   subtype={selectedNode.subtype}
+                  config={selectedNode.config as Record<string, unknown>}
+                  onChange={handleChange}
+                />
+              )}
+              {selectedNode.kind === 'quality' && (
+                <QualityForm
                   config={selectedNode.config as Record<string, unknown>}
                   onChange={handleChange}
                 />

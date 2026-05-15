@@ -53,12 +53,19 @@ const PALETTE_ITEMS: NodePaletteItem[] = [
     description: 'Écrire dans une table PostgreSQL', icon: '🐘',
     defaultLayer: 'gold', defaultConfig: { host: 'localhost', port: 5432, database: '', schema: 'public', table: '', mode: 'append' },
   },
+  {
+  kind: 'quality', subtype: 'data_quality', label: 'Data Quality',
+  description: 'Valider la qualité des données', icon: '🔍',
+  defaultLayer: 'silver',
+  defaultConfig: { rules: [], fail_on_error: true },
+},
 ]
 
 const SECTIONS = [
   { label: 'Sources',         kind: 'source'    as const },
   { label: 'Transformations', kind: 'transform' as const },
   { label: 'Destinations',    kind: 'output'    as const },
+  { label: 'Qualité', kind: 'quality' as const },
 ]
 
 function NodeCard({ item }: { item: NodePaletteItem }) {

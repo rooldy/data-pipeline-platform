@@ -21,11 +21,13 @@ import SourceNode    from './nodes/SourceNode'
 import TransformNode from './nodes/TransformNode'
 import OutputNode    from './nodes/OutputNode'
 import './PipelineCanvas.css'
+import QualityNode from './nodes/QualityNode'
 
 const nodeTypes = {
   source:    SourceNode,
   transform: TransformNode,
   output:    OutputNode,
+  quality:   QualityNode, 
 }
 
 const LAYER_COLORS: Record<MedallionLayer, string> = {

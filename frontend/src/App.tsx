@@ -35,6 +35,7 @@ function Dashboard() {
           ⬡ Ouvrir le Pipeline Builder →
         </Link>
         <Link to="/monitoring" style={styles.builderBtn}>
+          
           📊 Ouvrir le Monitoring →
         </Link>
       </header>
