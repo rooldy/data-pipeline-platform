@@ -1,0 +1,43 @@
+{
+  "dag_id": "pipeline_nouveau_pipeline",
+  "node_id": "node_1778931100586_ys5nx",
+  "timestamp": "2026-05-16T11:43:16.238572",
+  "total_rows": 15,
+  "total_rules": 3,
+  "passed_rules": 3,
+  "failed_rules": 0,
+  "all_passed": true,
+  "results": [
+    {
+      "rule_type": "not_null",
+      "column": "order_id",
+      "threshold": 100.0,
+      "actual": 100.0,
+      "passed": true,
+      "message": "15/15 valeurs non nulles (100.0%)"
+    },
+    {
+      "rule_type": "range",
+      "column": "total_amount",
+      "min_value": 0,
+      "max_value": 10000,
+      "threshold": 95.0,
+      "actual": 100.0,
+      "passed": true,
+      "message": "15/15 valeurs dans [0, 10000] (100.0%)"
+    },
+    {
+      "rule_type": "in_set",
+      "column": "status",
+      "values": [
+        "completed",
+        "pending",
+        "cancelled"
+      ],
+      "threshold": 100.0,
+      "actual": 100.0,
+      "passed": true,
+      "message": "15/15 valeurs dans l'ensemble autorisé (100.0%)"
+    }
+  ]
+}

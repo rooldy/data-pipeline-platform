@@ -10,6 +10,7 @@ class NodeKind(str, Enum):
     source    = "source"
     transform = "transform"
     output    = "output"
+    quality   = "quality"
 
 
 class MedallionLayer(str, Enum):

@@ -7,6 +7,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
+from pyspark.sql import functions as F
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,8 @@ QUALITY_DIR = Path(os.getenv("QUALITY_DIR", "/data/quality"))
 # ─── Règles de validation ─────────────────────────────────────────────────────
 
 def _check_not_null(df, column: str, threshold: float) -> dict:
-    from pyspark.sql import functions as F
+    column = column.strip()
+
     total     = df.count()
     not_null  = df.filter(F.col(column).isNotNull()).count()
     rate      = round(not_null / total * 100, 2) if total > 0 else 0
@@ -32,7 +34,8 @@ def _check_not_null(df, column: str, threshold: float) -> dict:
 
 
 def _check_regex(df, column: str, pattern: str, threshold: float) -> dict:
-    from pyspark.sql import functions as F
+    column = column.strip()
+    
     total    = df.count()
     matching = df.filter(F.col(column).rlike(pattern)).count()
     rate     = round(matching / total * 100, 2) if total > 0 else 0
@@ -49,7 +52,8 @@ def _check_regex(df, column: str, pattern: str, threshold: float) -> dict:
 
 
 def _check_range(df, column: str, min_value, max_value, threshold: float) -> dict:
-    from pyspark.sql import functions as F
+    column = column.strip()
+    
     total = df.count()
     cond  = F.col(column).isNotNull()
     if min_value is not None:
@@ -73,6 +77,7 @@ def _check_range(df, column: str, min_value, max_value, threshold: float) -> dic
 
 
 def _check_in_set(df, column: str, values: list, threshold: float) -> dict:
+    column = column.strip()
     total    = df.count()
     in_set   = df.filter(df[column].isin(values)).count()
     rate     = round(in_set / total * 100, 2) if total > 0 else 0

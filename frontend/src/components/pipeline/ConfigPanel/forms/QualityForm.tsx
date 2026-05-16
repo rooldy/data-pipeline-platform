@@ -98,7 +98,7 @@ export default function QualityForm({ config, onChange }: Props) {
               </select>
               <input className="config-field__input" placeholder="colonne" style={{ flex: 1 }}
                 value={rule.column}
-                onChange={(e) => updateRule(rule.id, { column: e.target.value })} />
+                onChange={(e) => updateRule(rule.id, { column: e.target.value.trim() })} />
             </div>
 
             {/* Paramètres selon le type */}
