@@ -61,3 +61,6 @@ data/silver/
 data/bronze/*.parquet
 airflow/dags/generated/*.py
 airflow/logs/
+
+data/quality/
+data/quality/
