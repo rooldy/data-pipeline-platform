@@ -1,6 +1,7 @@
 """
 FastAPI Application - Data Pipeline Platform
 """
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.pipelines import router as pipelines_router
@@ -10,12 +11,24 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# ── Lifespan ──────────────────────────────────────────────────────────────────
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("🚀 Starting Data Pipeline Platform API v0.2.0")
+    logger.info("🏗️  Architecture: Medallion (Bronze/Silver/Gold)")
+    yield
+    logger.info("🛑 Shutting down...")
+
+# ── App ───────────────────────────────────────────────────────────────────────
+
 app = FastAPI(
     title="Data Pipeline Platform API",
     description="API pour la création de pipelines ETL no-code avec architecture Medallion",
     version="0.2.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -26,23 +39,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Routers ──────────────────────────────────────────────────────────────────
+# ── Routers ───────────────────────────────────────────────────────────────────
 
 app.include_router(pipelines_router)
 app.include_router(monitoring_router)
 
-# ── Events ───────────────────────────────────────────────────────────────────
-
-@app.on_event("startup")
-async def startup_event():
-    logger.info("🚀 Starting Data Pipeline Platform API v0.2.0")
-    logger.info("🏗️  Architecture: Medallion (Bronze/Silver/Gold)")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    logger.info("🛑 Shutting down...")
-
-# ── Endpoints de base ────────────────────────────────────────────────────────
+# ── Endpoints de base ─────────────────────────────────────────────────────────
 
 @app.get("/")
 async def root():
