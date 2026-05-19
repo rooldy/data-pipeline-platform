@@ -1,4 +1,3 @@
-import React from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import type { MedallionLayer } from '../../../../types/pipeline.types'
 import './nodes.css'

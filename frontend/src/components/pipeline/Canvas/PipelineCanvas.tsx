@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState, type MouseEvent, type DragEvent  } from 'react'
 import {
   ReactFlow,
   Background,
@@ -49,7 +49,7 @@ function EmptyCanvasHint() {
 
 export default function PipelineCanvas() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
-  const [rfInstance, setRfInstance] = React.useState<ReactFlowInstance | null>(null)
+  const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null)
 
   const storeNodes   = usePipelineStore((s) => s.nodes)
   const addStoreNode = usePipelineStore((s) => s.addNode)
@@ -89,7 +89,7 @@ export default function PipelineCanvas() {
   )
 
   const onNodeDragStop = useCallback(
-    (_: React.MouseEvent, node: Node) => { updatePos(node.id, node.position) },
+    (_: MouseEvent, node: Node) => { updatePos(node.id, node.position) },
     [updatePos]
   )
 
@@ -110,7 +110,7 @@ export default function PipelineCanvas() {
 
   const onPaneClick = useCallback(() => { selectNode(null) }, [selectNode])
 
-  const onDragOver = useCallback((event: React.DragEvent) => {
+  const onDragOver = useCallback((event: DragEvent) => {
     event.preventDefault()
     event.dataTransfer.dropEffect = 'move'
   }, [])
@@ -120,6 +120,7 @@ export default function PipelineCanvas() {
       event.preventDefault()
       if (!rfInstance || !reactFlowWrapper.current) return
 
+      if (!event.dataTransfer) return
       const raw = event.dataTransfer.getData('application/pipeline-node')
       if (!raw) return
 

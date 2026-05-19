@@ -1,6 +1,6 @@
-import React from 'react'
 import type { NodePaletteItem } from '../../../types/pipeline.types'
 import './NodePalette.css'
+import type { DragEvent } from 'react'
 
 const PALETTE_ITEMS: NodePaletteItem[] = [
   {
@@ -69,7 +69,7 @@ const SECTIONS = [
 ]
 
 function NodeCard({ item }: { item: NodePaletteItem }) {
-  const onDragStart = (e: React.DragEvent) => {
+  const onDragStart = (e: DragEvent) => {
     e.dataTransfer.setData('application/pipeline-node', JSON.stringify(item))
     e.dataTransfer.effectAllowed = 'move'
   }

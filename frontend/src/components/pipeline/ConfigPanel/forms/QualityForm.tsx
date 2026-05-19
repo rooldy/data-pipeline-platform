@@ -1,5 +1,4 @@
-import React from 'react'
-import type { DataQualityConfig, QualityRule, QualityRuleType } from '../../../../types/pipeline.types'
+import type { QualityRule, QualityRuleType } from '../../../../types/pipeline.types'
 
 interface Props {
   config: Record<string, unknown>

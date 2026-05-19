@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, type MouseEvent, Fragment  } from 'react'
 import { Link } from 'react-router-dom'
 import {
   getMonitoringSummary, getPipelineRuns, getRunTasks,
@@ -81,7 +81,7 @@ function PipelineCard({ pipeline }: { pipeline: MonitoredPipeline }) {
   const [expandedRun, setExpandedRun] = useState<string | null>(null)
   const [triggering, setTriggering]   = useState(false)
 
-  const handleTrigger = async (e: React.MouseEvent) => {
+  const handleTrigger = async (e: MouseEvent) => {
     e.stopPropagation()
     setTriggering(true)
     try {
@@ -140,7 +140,7 @@ function PipelineCard({ pipeline }: { pipeline: MonitoredPipeline }) {
             </thead>
             <tbody>
               {runs.map((run) => (
-                <React.Fragment key={run.run_id}>
+                <Fragment key={run.run_id}>
                   <tr
                     style={{ cursor: 'pointer' }}
                     onClick={() => setExpandedRun(expandedRun === run.run_id ? null : run.run_id)}
@@ -156,7 +156,7 @@ function PipelineCard({ pipeline }: { pipeline: MonitoredPipeline }) {
                   {expandedRun === run.run_id && (
                     <TaskRow dagId={run.dag_id} runId={run.run_id} />
                   )}
-                </React.Fragment>
+                </Fragment>
               ))}
             </tbody>
           </table>

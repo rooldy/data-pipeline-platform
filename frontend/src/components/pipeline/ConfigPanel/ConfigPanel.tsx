@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { usePipelineStore } from '../../../store/pipelineStore'
 import SourceForm    from './forms/SourceForm'
 import TransformForm from './forms/TransformForm'

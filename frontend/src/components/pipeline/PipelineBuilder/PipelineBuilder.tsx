@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import PipelineCanvas from '../Canvas/PipelineCanvas'
 import NodePalette    from '../NodePalette/NodePalette'

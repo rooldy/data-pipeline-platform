@@ -1,6 +1,4 @@
-import React from 'react'
-import type { CsvConfig, PostgreSQLSourceConfig, ApiRestConfig, S3Config, NodeSubtype } from '../../../../types/pipeline.types'
-
+import type { NodeSubtype } from '../../../../types/pipeline.types'
 interface Props {
   subtype: NodeSubtype
   config: Record<string, unknown>

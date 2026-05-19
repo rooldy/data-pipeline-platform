@@ -1,4 +1,3 @@
-import React from 'react'
 import type { AggregateConfig, CastConfig, NodeSubtype } from '../../../../types/pipeline.types'
 
 interface Props {

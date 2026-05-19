@@ -1,4 +1,3 @@
-import React from 'react'
 import type { NodeSubtype } from '../../../../types/pipeline.types'
 
 interface Props {
