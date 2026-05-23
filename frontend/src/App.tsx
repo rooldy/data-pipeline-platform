@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import axios from 'axios'
 import PipelineBuilder from './components/pipeline/PipelineBuilder/PipelineBuilder'
 import Monitoring from './pages/Monitoring/Monitoring'
+import Login from './pages/Login/Login'
+import ProtectedRoute from './components/auth/ProtectedRoute/ProtectedRoute'
 
 // ─── Dashboard (page d'accueil existante) ────────────────────────────────────
 
@@ -99,6 +101,11 @@ export default function App() {
         <Route path="/pipeline/new"    element={<PipelineBuilder />} />
         <Route path="/pipeline/:id"    element={<PipelineBuilder />} />
         <Route path="/monitoring" element={<Monitoring />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={ <ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/pipeline/new" element={<ProtectedRoute><PipelineBuilder /></ProtectedRoute>} />
+        <Route path="/pipeline/:id" element={<ProtectedRoute><PipelineBuilder /></ProtectedRoute>} />
+        <Route path="/monitoring" element={<ProtectedRoute><Monitoring /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   )

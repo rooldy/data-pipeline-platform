@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.pipelines import router as pipelines_router
 from app.api.v1.monitoring import router as monitoring_router
+from app.api.v1.auth import router as auth_router
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -43,6 +44,7 @@ app.add_middleware(
 
 app.include_router(pipelines_router)
 app.include_router(monitoring_router)
+app.include_router(auth_router)
 
 # ── Endpoints de base ─────────────────────────────────────────────────────────
 
