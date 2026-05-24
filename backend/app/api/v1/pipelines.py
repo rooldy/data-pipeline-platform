@@ -6,7 +6,7 @@ DELETE /api/v1/pipelines/{id} → supprimer un pipeline
 """
 import uuid
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 
 from app.models.pipeline import (
     PipelineDefinition,
@@ -14,6 +14,7 @@ from app.models.pipeline import (
     PipelineListItem,
 )
 from app.services.dag_generator import generate_dag, list_generated_dags, delete_dag
+from app.auth.jwt import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/pipelines", tags=["Pipelines"])
@@ -25,6 +26,7 @@ async def create_pipeline(pipeline: PipelineDefinition):
     Reçoit une PipelineDefinition depuis le frontend,
     génère le DAG Airflow et le sauvegarde dans /opt/airflow/dags/generated/
     """
+    current_user: dict = Depends(get_current_user)
     try:
         # Générer un ID si absent
         if not pipeline.id:
@@ -58,8 +60,9 @@ async def create_pipeline(pipeline: PipelineDefinition):
 
 
 @router.get("", response_model=list[PipelineListItem])
-async def list_pipelines():
-    """Liste tous les pipelines générés"""
+async def list_pipelines(
+    current_user: dict = Depends(get_current_user),  # ← dans la signature
+):
     dags = list_generated_dags()
     return [
         PipelineListItem(
@@ -75,8 +78,10 @@ async def list_pipelines():
 
 
 @router.delete("/{dag_id}", status_code=204)
-async def delete_pipeline(dag_id: str):
-    """Supprime un pipeline généré"""
+async def delete_pipeline(
+    dag_id: str,
+    current_user: dict = Depends(get_current_user),  # ← dans la signature
+):
     deleted = delete_dag(dag_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=f"Pipeline '{dag_id}' introuvable")

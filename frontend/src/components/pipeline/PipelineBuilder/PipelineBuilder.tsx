@@ -7,6 +7,7 @@ import { ToastContainer, useToast } from '../../common/Toast/Toast'
 import { usePipelineStore } from '../../../store/pipelineStore'
 import { createPipeline, saveToLocalStorage } from '../../../api/pipeline.api'
 import './PipelineBuilder.css'
+import UserMenu from '../../common/UserMenu/UserMenu'
 interface TopbarProps {
   onSave:   () => void
   onDeploy: () => void
@@ -76,6 +77,7 @@ function PipelineTopbar({ onSave, onDeploy, isSaving }: TopbarProps) {
           }
         </button>
       </div>
+      <UserMenu />
     </header>
   )
 }

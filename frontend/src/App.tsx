@@ -5,7 +5,7 @@ import PipelineBuilder from './components/pipeline/PipelineBuilder/PipelineBuild
 import Monitoring from './pages/Monitoring/Monitoring'
 import Login from './pages/Login/Login'
 import ProtectedRoute from './components/auth/ProtectedRoute/ProtectedRoute'
-
+import UserMenu from './components/common/UserMenu/UserMenu'
 // ─── Dashboard (page d'accueil existante) ────────────────────────────────────
 
 interface ApiInfo {
@@ -40,6 +40,9 @@ function Dashboard() {
           
           📊 Ouvrir le Monitoring →
         </Link>
+        <div style={{ position: 'relative', top: '1rem', right: '1rem' }}>
+        <UserMenu />
+        </div>
       </header>
 
       <main style={styles.main}>

@@ -6,6 +6,7 @@ import {
   type MonitoredPipeline, type PipelineRun, type TaskInstance,
 } from '../../api/monitoring.api'
 import './Monitoring.css'
+import UserMenu from '../../components/common/UserMenu/UserMenu'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -218,6 +219,7 @@ export default function Monitoring() {
           <Link to="/pipeline/new">
             <button className="mon-btn mon-btn--primary">⬡ Nouveau pipeline</button>
           </Link>
+          <UserMenu />
         </div>
       </header>
 
